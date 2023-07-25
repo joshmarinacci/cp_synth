@@ -1,6 +1,7 @@
 import displayio
 import adafruit_imageload
 import ulab.numpy as np
+import random
 
 # a bar is 4 whole notes
 # there are 16 steps, each a quarter note
@@ -38,38 +39,74 @@ PLAY = 0
 
 CELL_EMP = 0
 CELL_SEL = 1
-CELL_EMP_NO = 0
-CELL_EMP_YES = 1
-CELL_SEL_NO = 2
-CELL_SEL_YES = 3
+TILE_EMPTY = 6
+TILE_EMPTY_HIGHLIGHTED = 7
+TILE_SELECTED = 9
+TILE_SELECTED_HIGHLIGHTED = 10
 
-class DrumSequencer():
+TILE_HIGHHAT = 4
+TILE_SNARE = 3
+TILE_KICKDRUM = 5
+TILE_MUTE_OFF = 2
+TILE_MUTE_ON = 8
+
+class DrumSequencer(displayio.Group):
     def __init__(self) -> None:
+        super().__init__()
         print("loading tile image")
-        self.bitmap, self.palette = adafruit_imageload.load(
-            "tiles.bmp", bitmap=displayio.Bitmap, palette=displayio.Palette
-        )
+        self.tiles, self.tiles_pal = adafruit_imageload.load("tiles.bmp")
+        self.grid = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
+                                            width=16, height=13,
+                                            tile_width=10, tile_height=10,
+                                            default_tile=11
+                                            )
+        self.append(self.grid)
+
         self.cells = [[0 for j in range(16)] for i in range(3)]
 
-        self.grid = displayio.TileGrid(self.bitmap, pixel_shader=self.palette, 
-                                  width=16, height=3, 
-                                  tile_width=8, tile_height=8)
-        self.highlighted = (1,2)
+        # first column
+        self.grid[(0,1)] = TILE_HIGHHAT
+        self.grid[(0,2)] = TILE_SNARE
+        self.grid[(0,3)] = TILE_KICKDRUM
+        # second column
+        self.grid[(1,1)] = TILE_MUTE_OFF
+        self.grid[(1,2)] = TILE_MUTE_ON
+        self.grid[(1,3)] = TILE_MUTE_OFF
+
+        for j in range(1,4):
+            for i in range(2,16):
+                self.grid[(i,j)] = TILE_EMPTY
+
+        self.highlighted = (2,2)
         self.set_at(self.highlighted,CELL_SEL)
+
+
+
+        # bottom status bar
+
+        self.grid[(3,11)] = TILE_SELECTED_HIGHLIGHTED
+
+        # self.statusbar[0] = 0
+        # self.statusbar[1] = 1
+        # self.statusbar[2] = 2
+        # self.statusbar[3] = 3
+        # self.statusbar[4] = 4
+        # # self.statusbar.y = 128-10
+        # self.append(self.statusbar)
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
         if newhi[0] >= 0 and newhi[0] < 16:
             if newhi[1] >= 0 and newhi[1] < 3: 
                 if self.get_at(self.highlighted) == CELL_SEL:
-                    self.grid[self.highlighted] = CELL_SEL_NO
+                    self.grid[self.highlighted] = TILE_SELECTED
                 else:
-                    self.grid[self.highlighted] = CELL_EMP_NO
+                    self.grid[self.highlighted] = TILE_EMPTY
                 self.highlighted = newhi
                 if self.get_at(self.highlighted) == CELL_SEL:
-                    self.grid[self.highlighted] = CELL_SEL_YES
+                    self.grid[self.highlighted] = TILE_SELECTED_HIGHLIGHTED
                 else:
-                    self.grid[self.highlighted] = CELL_EMP_YES
+                    self.grid[self.highlighted] = TILE_EMPTY_HIGHLIGHTED
 
     def get_at(self, xy):
         print('getting at',xy)
@@ -80,14 +117,14 @@ class DrumSequencer():
         self.cells[xy[1]][xy[0]] = val
         if val == CELL_SEL:
             if self.highlighted == xy:
-                self.grid[xy] = CELL_SEL_YES
+                self.grid[xy] = TILE_SELECTED_HIGHLIGHTED
             else:
-                self.grid[xy] = CELL_SEL_NO
+                self.grid[xy] = TILE_SELECTED
         else:
             if self.highlighted == xy:
-                self.grid[xy] = CELL_EMP_YES
+                self.grid[xy] = TILE_EMPTY_HIGHLIGHTED
             else:
-                self.grid[xy] = CELL_EMP_NO
+                self.grid[xy] = TILE_EMPTY
 
     def toggle(self):
         curr = self.get_at(self.highlighted)
