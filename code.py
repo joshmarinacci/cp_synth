@@ -98,9 +98,9 @@ display = board.DISPLAY
 group = displayio.Group()
 
 
-# enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
-# enable.direction = digitalio.Direction.OUTPUT
-# enable.value = True
+enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
+enable.direction = digitalio.Direction.OUTPUT
+enable.value = True
 
 audio = AudioOut(board.SPEAKER, right_channel=board.A1)
 # audio = AudioOut(board.SPEAKER)
@@ -329,8 +329,7 @@ mixer.voice[0].level = 0.5  # 25% volume might be better
 # group.append(menu.grids)
 # draw_text2(bitmap, 'hello', 20, 10)
 
-
-sequencer = DrumSequencer()
+sequencer = DrumSequencer(mixer)
 group.append(sequencer)
 display.root_group = group
 
