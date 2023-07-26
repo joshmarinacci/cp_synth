@@ -129,22 +129,23 @@ PLAY = 0
 
 CELL_EMP = 0
 CELL_SEL = 1
-TILE_EMPTY = 6
-TILE_EMPTY_HIGHLIGHTED = 7
-TILE_SELECTED = 9
-TILE_SELECTED_HIGHLIGHTED = 10
 
-TILE_EMPTY_PLAYING = 7
-TILE_SELECTED_PLAYING = 10
+TILE_BLANK = 4
+TILE_EMPTY = 0
+TILE_EMPTY_HIGHLIGHTED = 1
+TILE_SELECTED = 2
+TILE_SELECTED_HIGHLIGHTED = 3
+TILE_EMPTY_PLAYING = 1
+TILE_SELECTED_PLAYING = 1
 
-TILE_HIGHHAT = 4
-TILE_SNARE = 3
-TILE_KICKDRUM = 5
-TILE_MUTE_OFF = 2
-TILE_MUTE_ON = 8
+TILE_SNARE = 6
+TILE_HIGHHAT = 7
+TILE_KICKDRUM = 8
 
-TILE_WHOLE_NOTE_MARKER = 12
-TILE_PLAY = 0
+TILE_MUTE_OFF = 10
+TILE_MUTE_ON = 9
+TILE_WHOLE_NOTE_MARKER = 1
+TILE_PLAY = 5
 
 GRID_X_MIN = 2
 GRID_X_MAX = 2+8
@@ -165,9 +166,9 @@ class DrumSequencer(displayio.Group):
 
         self.tiles, self.tiles_pal = adafruit_imageload.load("tiles.bmp")
         self.grid = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
-                                            width=16, height=13,
-                                            tile_width=10, tile_height=10,
-                                            default_tile=11
+                                            width=12, height=8,
+                                            tile_width=16, tile_height=16,
+                                            default_tile=TILE_BLANK
                                             )
         self.append(self.grid)
 
@@ -198,7 +199,7 @@ class DrumSequencer(displayio.Group):
         self.highlighted = (5,2)
 
         # bottom status bar
-        self.grid[(0,11)] = TILE_PLAY
+        self.grid[(0,7)] = TILE_PLAY
         self.refresh()
 
     def refresh(self):
