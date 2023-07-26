@@ -53,13 +53,71 @@ class KickDrum():
         self.note3 = synthio.Note(frequency=41, envelope=self.amp_env3, waveform=sinwave2, filter=self.lpf, bend=self.lfo)
 
     def trigger(self) -> None:
+        self.lfo.retrigger()
+        self.synth.press((self.note1, self.note2, self.note3))
+    def end(self) -> None:
+        self.synth.release((self.note1, self.note2, self.note3))
+
+class SnareDrum():
+    def __init__(self) -> None:
+        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
+
+        # kick drum
+        self.lfo = synthio.LFO(waveform=downwave)
+        self.lfo.once = True
+        self.lfo.offset=0.33
+        self.lfo.scale = 0.3
+        self.lfo.rate=20
+    
+        self.filter_fr = 9500
+        self.lpf = self.synth.low_pass_filter(frequency=self.filter_fr)
+
+        self.amp_env1 = synthio.Envelope(attack_time=0.0, decay_time=0.115, release_time=0, attack_level=1, sustain_level=0)
+        self.note1 = synthio.Note(frequency=90, envelope=self.amp_env1, waveform=w1, filter=self.lpf, bend=self.lfo)
+
+        self.amp_env2 = synthio.Envelope(attack_time=0.0, decay_time=0.095, release_time=0, attack_level=1, sustain_level=0)
+        self.note2 = synthio.Note(frequency=135, envelope=self.amp_env2, waveform=w2, filter=self.lpf, bend=self.lfo)
+
+        self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=0.115, release_time=0, attack_level=1, sustain_level=0)
+        self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=w2, filter=self.lpf, bend=self.lfo)
+
+
+    def trigger(self) -> None:
         print("playing")
         self.lfo.retrigger()
         self.synth.press((self.note1, self.note2, self.note3))
-        time.sleep(0.25)
+    def end(self) -> None:
         self.synth.release((self.note1, self.note2, self.note3))
 
+class HighHat():
+    def __init__(self) -> None:
+        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
 
+        # kick drum
+        self.lfo = synthio.LFO(waveform=downwave)
+        self.lfo.once = True
+        self.lfo.offset=0.33
+        self.lfo.scale = 0.3
+        self.lfo.rate=20
+    
+        t = 0.115
+        self.filter_fr = 9500
+        self.hpf = self.synth.high_pass_filter(frequency=self.filter_fr)
+
+        self.amp_env1 = synthio.Envelope(attack_time=0.0, decay_time=t, release_time=0, attack_level=1, sustain_level=0)
+        self.note1 = synthio.Note(frequency=90, envelope=self.amp_env1, waveform=noisewave, filter=self.hpf, bend=self.lfo)
+
+        self.amp_env2 = synthio.Envelope(attack_time=0.0, decay_time=t-0.02, release_time=0, attack_level=1, sustain_level=0)
+        self.note2 = synthio.Note(frequency=135, envelope=self.amp_env2, waveform=w2, filter=self.hpf, bend=self.lfo)
+
+        self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=t, release_time=0, attack_level=1, sustain_level=0)
+        self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=noisewave, filter=self.hpf, bend=self.lfo)
+
+    def trigger(self) -> None:
+        self.lfo.retrigger()
+        self.synth.press((self.note1, self.note2, self.note3))
+    def end(self) -> None:
+        self.synth.release((self.note1, self.note2, self.note3))
 
 UP = 32
 RIGHT = 33
@@ -96,8 +154,13 @@ class DrumSequencer(displayio.Group):
         super().__init__()
 
 
-        self.drums = KickDrum()
-        mixer.voice[0].play(self.drums.synth)
+        self.kick = KickDrum()
+        # mixer.voice[0].play(self.kick.synth)
+        self.snare = SnareDrum()
+        mixer.voice[0].play(self.snare.synth)
+        self.hihat = HighHat()
+        mixer.voice[1].play(self.hihat.synth)
+
         print("loading tile image")
         self.tiles, self.tiles_pal = adafruit_imageload.load("tiles.bmp")
         self.grid = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
@@ -181,11 +244,21 @@ class DrumSequencer(displayio.Group):
 
     def playFromStart(self):
         for col in range(0,GRID_X_MAX-GRID_X_MIN):
-            note = self.cells[0][col]
-            print("note",note)
-            if note == CELL_SEL:
-                self.drums.trigger()
+            if self.cells[0][col] == CELL_SEL:
+                self.kick.trigger()
+            if self.cells[1][col] == CELL_SEL:
+                self.snare.trigger()
+            if self.cells[2][col] == CELL_SEL:
+                self.hihat.trigger()
             time.sleep(0.2)
+            if self.cells[0][col] == CELL_SEL:
+                self.kick.end()
+            if self.cells[1][col] == CELL_SEL:
+                self.snare.end()
+            if self.cells[2][col] == CELL_SEL:
+                self.hihat.end()
+            time.sleep(0.2)
+
 
 
     def update(self, joy, key):
