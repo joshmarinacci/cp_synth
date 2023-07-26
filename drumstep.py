@@ -28,10 +28,10 @@ w1 = np.array( [int(max(min(sinwave1[i] + (noisewave[i]/2.0), 32767), -32767)) f
 w2 = np.array( [int(max(min(sinwave2[i] + (noisewave[i]/2.0), 32767), -32767)) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 
 class KickDrum():
-    def __init__(self) -> None:
+    def __init__(self, synth) -> None:
         print("made drums")
+        self.synth = synth
 
-        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
 
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
@@ -59,8 +59,8 @@ class KickDrum():
         self.synth.release((self.note1, self.note2, self.note3))
 
 class SnareDrum():
-    def __init__(self) -> None:
-        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
+    def __init__(self, synth) -> None:
+        self.synth = synth
 
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
@@ -83,15 +83,14 @@ class SnareDrum():
 
 
     def trigger(self) -> None:
-        print("playing")
         self.lfo.retrigger()
         self.synth.press((self.note1, self.note2, self.note3))
     def end(self) -> None:
         self.synth.release((self.note1, self.note2, self.note3))
 
 class HighHat():
-    def __init__(self) -> None:
-        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
+    def __init__(self, synth) -> None:
+        self.synth = synth
 
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
@@ -135,6 +134,9 @@ TILE_EMPTY_HIGHLIGHTED = 7
 TILE_SELECTED = 9
 TILE_SELECTED_HIGHLIGHTED = 10
 
+TILE_EMPTY_PLAYING = 7
+TILE_SELECTED_PLAYING = 10
+
 TILE_HIGHHAT = 4
 TILE_SNARE = 3
 TILE_KICKDRUM = 5
@@ -154,14 +156,13 @@ class DrumSequencer(displayio.Group):
         super().__init__()
 
 
-        self.kick = KickDrum()
-        # mixer.voice[0].play(self.kick.synth)
-        self.snare = SnareDrum()
-        mixer.voice[0].play(self.snare.synth)
-        self.hihat = HighHat()
-        mixer.voice[1].play(self.hihat.synth)
+        self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
+        mixer.voice[0].play(self.synth)
 
-        print("loading tile image")
+        self.kick = KickDrum(self.synth)
+        self.snare = SnareDrum(self.synth)
+        self.hihat = HighHat(self.synth)
+
         self.tiles, self.tiles_pal = adafruit_imageload.load("tiles.bmp")
         self.grid = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
                                             width=16, height=13,
@@ -174,8 +175,8 @@ class DrumSequencer(displayio.Group):
         for j in range(0, GRID_Y_MAX-GRID_Y_MIN):
             self.cells.append([])
             for i in range(0, GRID_X_MAX-GRID_X_MIN):
-                print("making",j,i)
                 self.cells[j].append(CELL_EMP)
+        self.playing_column = -1
 
         # first column
         self.grid[(0,1)] = TILE_HIGHHAT
@@ -195,45 +196,52 @@ class DrumSequencer(displayio.Group):
                 self.grid[(i,j)] = TILE_EMPTY
 
         self.highlighted = (5,2)
-        self.set_at(self.highlighted,CELL_SEL)
-
-
 
         # bottom status bar
         self.grid[(0,11)] = TILE_PLAY
+        self.refresh()
+
+    def refresh(self):
+        for j in range(GRID_Y_MIN, GRID_Y_MAX):
+            for i in range(GRID_X_MIN, GRID_X_MAX):
+                y = j - GRID_Y_MIN
+                x = i - GRID_X_MIN
+                val = self.cells[y][x]
+                high = self.highlighted == (i,j)
+                tile = TILE_EMPTY
+                playing = self.playing_column == x
+                if val == CELL_SEL:
+                    tile = TILE_SELECTED
+                    if high:
+                        tile = TILE_SELECTED_HIGHLIGHTED
+                    if playing:
+                        tile = TILE_SELECTED_PLAYING
+                    
+                else:
+                    tile = TILE_EMPTY
+                    if high:
+                        tile = TILE_EMPTY_HIGHLIGHTED
+                    if playing:
+                        tile = TILE_EMPTY_PLAYING
+                self.grid[(i,j)] = tile
+
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
         if newhi[0] >= GRID_X_MIN and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
-                if self.get_at(self.highlighted) == CELL_SEL:
-                    self.grid[self.highlighted] = TILE_SELECTED
-                else:
-                    self.grid[self.highlighted] = TILE_EMPTY
                 self.highlighted = newhi
-                if self.get_at(self.highlighted) == CELL_SEL:
-                    self.grid[self.highlighted] = TILE_SELECTED_HIGHLIGHTED
-                else:
-                    self.grid[self.highlighted] = TILE_EMPTY_HIGHLIGHTED
+        self.refresh()
 
     def get_at(self, xy):
-        print('getting at',xy)
         return self.cells[xy[1]-GRID_Y_MIN][xy[0]-GRID_X_MIN]
     
     def set_at(self, xy, val):
-        print('setting',xy,val,self.highlighted,)
         self.cells[xy[1]-GRID_Y_MIN][xy[0]-GRID_X_MIN] = val
-        print(self.cells)
-        if val == CELL_SEL:
-            if self.highlighted == xy:
-                self.grid[xy] = TILE_SELECTED_HIGHLIGHTED
-            else:
-                self.grid[xy] = TILE_SELECTED
-        else:
-            if self.highlighted == xy:
-                self.grid[xy] = TILE_EMPTY_HIGHLIGHTED
-            else:
-                self.grid[xy] = TILE_EMPTY
+
+    def set_playing_column(self, col):
+        self.playing_column = col
+        self.refresh()
 
     def toggle(self):
         curr = self.get_at(self.highlighted)
@@ -241,9 +249,11 @@ class DrumSequencer(displayio.Group):
             self.set_at(self.highlighted,CELL_SEL)
         else:
             self.set_at(self.highlighted,CELL_EMP)
+        self.refresh()
 
     def playFromStart(self):
         for col in range(0,GRID_X_MAX-GRID_X_MIN):
+            self.set_playing_column(col)
             if self.cells[0][col] == CELL_SEL:
                 self.kick.trigger()
             if self.cells[1][col] == CELL_SEL:
@@ -258,6 +268,8 @@ class DrumSequencer(displayio.Group):
             if self.cells[2][col] == CELL_SEL:
                 self.hihat.end()
             time.sleep(0.2)
+            self.set_playing_column(col)
+        self.set_playing_column(-1)
 
 
 
