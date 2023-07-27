@@ -245,7 +245,6 @@ class DrumSequencer(displayio.Group):
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
-        print("nav to",newhi)
         if newhi[0] >= 1 and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
                 self.highlighted = newhi
@@ -264,7 +263,6 @@ class DrumSequencer(displayio.Group):
     def toggle(self):
         if(self.highlighted[0] == 1):
             voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
-            print("voice",voice)
             voice.mute = not voice.mute
             self.refresh()
             return
