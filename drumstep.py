@@ -27,12 +27,17 @@ noisewave = np.array([random.randint(-32767, 32767) for i in range(SAMPLE_SIZE)]
 w1 = np.array( [int(max(min(sinwave1[i] + (noisewave[i]/2.0), 32767), -32767)) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 w2 = np.array( [int(max(min(sinwave2[i] + (noisewave[i]/2.0), 32767), -32767)) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 
-class KickDrum():
+class Voice():
     def __init__(self, synth) -> None:
-        print("made drums")
         self.synth = synth
+        self.mute = False
 
+    def trigger(self) -> None:
+        print("trigger must be implemented")
 
+class KickDrum(Voice):
+    def __init__(self, synth) -> None:
+        super().__init__(synth)
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
         self.lfo.once = True
@@ -58,9 +63,9 @@ class KickDrum():
     def end(self) -> None:
         self.synth.release((self.note1, self.note2, self.note3))
 
-class SnareDrum():
+class SnareDrum(Voice):
     def __init__(self, synth) -> None:
-        self.synth = synth
+        super().__init__(synth)
 
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
@@ -83,14 +88,16 @@ class SnareDrum():
 
 
     def trigger(self) -> None:
-        self.lfo.retrigger()
-        self.synth.press((self.note1, self.note2, self.note3))
+        if not self.mute:
+            self.lfo.retrigger()
+            self.synth.press((self.note1, self.note2, self.note3))
     def end(self) -> None:
-        self.synth.release((self.note1, self.note2, self.note3))
+        if not self.mute:
+            self.synth.release((self.note1, self.note2, self.note3))
 
-class HighHat():
+class HighHat(Voice):
     def __init__(self, synth) -> None:
-        self.synth = synth
+        super().__init__(synth)
 
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
@@ -113,10 +120,12 @@ class HighHat():
         self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=noisewave, filter=self.hpf, bend=self.lfo)
 
     def trigger(self) -> None:
-        self.lfo.retrigger()
-        self.synth.press((self.note1, self.note2, self.note3))
+        if not self.mute:
+            self.lfo.retrigger()
+            self.synth.press((self.note1, self.note2, self.note3))
     def end(self) -> None:
-        self.synth.release((self.note1, self.note2, self.note3))
+        if not self.mute:
+            self.synth.release((self.note1, self.note2, self.note3))
 
 UP = 32
 RIGHT = 33
@@ -163,6 +172,7 @@ class DrumSequencer(displayio.Group):
         self.kick = KickDrum(self.synth)
         self.snare = SnareDrum(self.synth)
         self.hihat = HighHat(self.synth)
+        self.voices = [self.kick, self.snare, self.hihat]
 
         self.tiles, self.tiles_pal = adafruit_imageload.load("tiles.bmp")
         self.grid = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
@@ -225,11 +235,18 @@ class DrumSequencer(displayio.Group):
                     if playing:
                         tile = TILE_EMPTY_PLAYING
                 self.grid[(i,j)] = tile
+        for j in range(GRID_Y_MIN, GRID_Y_MAX):
+            voice = self.voices[j-GRID_Y_MIN]
+            if voice.mute:
+                self.grid[(1,j)] = TILE_MUTE_ON
+            else:
+                self.grid[(1,j)] = TILE_MUTE_OFF
 
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
-        if newhi[0] >= GRID_X_MIN and newhi[0] < GRID_X_MAX:
+        print("nav to",newhi)
+        if newhi[0] >= 1 and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
                 self.highlighted = newhi
         self.refresh()
@@ -245,6 +262,12 @@ class DrumSequencer(displayio.Group):
         self.refresh()
 
     def toggle(self):
+        if(self.highlighted[0] == 1):
+            voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
+            print("voice",voice)
+            voice.mute = not voice.mute
+            self.refresh()
+            return
         curr = self.get_at(self.highlighted)
         if(curr == CELL_EMP):
             self.set_at(self.highlighted,CELL_SEL)
