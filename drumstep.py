@@ -24,6 +24,8 @@ UP = 32
 RIGHT = 33
 DOWN = 34
 LEFT = 35
+KEY_START = 2
+KEY_SELECT = 3
 
 
 TOGGLE = 1
@@ -54,11 +56,15 @@ GRID_X_MAX = 2+8
 GRID_Y_MIN = 1
 GRID_Y_MAX = 4
 
+COLUMN_MUTE = 1
+COLUMN_VOICE = 0
+
 class DrumSequencer(displayio.Group):
     def __init__(self, mixer) -> None:
         super().__init__()
 
 
+        self.keys = {}
         self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
         mixer.voice[0].play(self.synth)
 
@@ -145,12 +151,11 @@ class DrumSequencer(displayio.Group):
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
-        if newhi[0] >= 1 and newhi[0] < GRID_X_MAX:
+        if newhi[0] >= 0 and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
                 self.overlay[self.highlighted] = TILE_CLEAR
                 self.highlighted = newhi
                 self.overlay[self.highlighted] = TILE_HIGHLIGHT
-        self.refresh()
 
     def get_at(self, xy):
         return self.cells[xy[1]-GRID_Y_MIN][xy[0]-GRID_X_MIN]
@@ -163,9 +168,14 @@ class DrumSequencer(displayio.Group):
         self.refresh()
 
     def toggle(self):
-        if(self.highlighted[0] == 1):
+        if(self.highlighted[0] == COLUMN_MUTE):
             voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
             voice.mute = not voice.mute
+            self.refresh()
+            return
+        if(self.highlighted[0] == COLUMN_VOICE):
+            voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
+            print('doing voice settings for',voice)
             self.refresh()
             return
         curr = self.get_at(self.highlighted)
@@ -207,10 +217,14 @@ class DrumSequencer(displayio.Group):
                     self.nav((0,1))
         if key:
             # print(key)
+            self.keys[key.key_number] = key.pressed
+            # print(self.keys)
             if key.pressed and key.key_number == TOGGLE:
                 self.toggle()
             if key.pressed and key.key_number == PLAY:
                 self.playFromStart()
+            if KEY_START in self.keys and KEY_SELECT in self.keys and self.keys[KEY_START] and self.keys[KEY_SELECT]:
+                print("doing a screenshot")
         for voice in self.voices:
             voice.update()
 
