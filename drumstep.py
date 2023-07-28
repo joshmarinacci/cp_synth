@@ -153,9 +153,7 @@ CELL_SEL = 1
 
 TILE_BLANK = 4
 TILE_EMPTY = 0
-TILE_EMPTY_HIGHLIGHTED = 1
 TILE_SELECTED = 2
-TILE_SELECTED_HIGHLIGHTED = 3
 TILE_EMPTY_PLAYING = 11
 TILE_SELECTED_PLAYING = 12
 
@@ -165,8 +163,10 @@ TILE_KICKDRUM = 8
 
 TILE_MUTE_OFF = 10
 TILE_MUTE_ON = 9
-TILE_WHOLE_NOTE_MARKER = 13
+TILE_WHOLE_NOTE_MARKER = 1
 TILE_PLAY = 5
+TILE_HIGHLIGHT = 13
+TILE_CLEAR = 14
 
 GRID_X_MIN = 2
 GRID_X_MAX = 2+8
@@ -193,6 +193,18 @@ class DrumSequencer(displayio.Group):
                                             default_tile=TILE_BLANK
                                             )
         self.append(self.grid)
+        # print(len(self.tiles_pal))
+        # for i,p in enumerate(self.tiles_pal):
+        #     # time.sleep(0.1)
+        #     if p != 65280:
+        #         print("print",i,self.tiles_pal.is_transparent(i),p)
+        self.tiles_pal.make_transparent(0)
+        self.overlay = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
+                                          width=12, height=8,
+                                          tile_height=16, tile_width=16,
+                                          default_tile=TILE_CLEAR
+                                          )
+        self.append(self.overlay)
 
         self.cells = []
         for j in range(0, GRID_Y_MAX-GRID_Y_MIN):
@@ -213,7 +225,7 @@ class DrumSequencer(displayio.Group):
         # top whole note markers
         for col in range(GRID_X_MIN, GRID_X_MAX+1, 4):
             self.grid[(col,0)] = TILE_WHOLE_NOTE_MARKER
-        # the grid cells   
+        # the grid cells
         for j in range(GRID_Y_MIN,GRID_Y_MAX):
             for i in range(GRID_X_MIN,GRID_X_MAX):
                 self.grid[(i,j)] = TILE_EMPTY
@@ -230,20 +242,15 @@ class DrumSequencer(displayio.Group):
                 y = j - GRID_Y_MIN
                 x = i - GRID_X_MIN
                 val = self.cells[y][x]
-                high = self.highlighted == (i,j)
                 tile = TILE_EMPTY
                 playing = self.playing_column == x
                 if val == CELL_SEL:
                     tile = TILE_SELECTED
-                    if high:
-                        tile = TILE_SELECTED_HIGHLIGHTED
                     if playing:
                         tile = TILE_SELECTED_PLAYING
                     
                 else:
                     tile = TILE_EMPTY
-                    if high:
-                        tile = TILE_EMPTY_HIGHLIGHTED
                     if playing:
                         tile = TILE_EMPTY_PLAYING
                 self.grid[(i,j)] = tile
@@ -257,10 +264,11 @@ class DrumSequencer(displayio.Group):
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
-        print("nav to",newhi)
         if newhi[0] >= 1 and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
+                self.overlay[self.highlighted] = TILE_CLEAR
                 self.highlighted = newhi
+                self.overlay[self.highlighted] = TILE_HIGHLIGHT
         self.refresh()
 
     def get_at(self, xy):
@@ -306,7 +314,7 @@ class DrumSequencer(displayio.Group):
     def update(self, joy, key):
         # print("updating sequencer")
         if joy:
-            print(joy)
+            # print(joy)
             if joy.pressed:
                 if joy.key_number == LEFT:
                     self.nav((-1,0))
@@ -317,7 +325,7 @@ class DrumSequencer(displayio.Group):
                 if joy.key_number == DOWN:
                     self.nav((0,1))
         if key:
-            print(key)
+            # print(key)
             if key.pressed and key.key_number == TOGGLE:
                 self.toggle()
             if key.pressed and key.key_number == PLAY:
