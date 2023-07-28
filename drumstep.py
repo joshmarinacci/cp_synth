@@ -56,15 +56,14 @@ GRID_X_MAX = 2+8
 GRID_Y_MIN = 1
 GRID_Y_MAX = 4
 
-COLUMN_MUTE = 1
 COLUMN_VOICE = 0
+COLUMN_MUTE = 1
 
 class DrumSequencer(displayio.Group):
     def __init__(self, mixer) -> None:
         super().__init__()
 
 
-        self.keys = {}
         self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
         mixer.voice[0].play(self.synth)
 
@@ -101,13 +100,13 @@ class DrumSequencer(displayio.Group):
         self.playing_column = -1
 
         # first column
-        self.grid[(0,1)] = TILE_HIGHHAT
-        self.grid[(0,2)] = TILE_SNARE
-        self.grid[(0,3)] = TILE_KICKDRUM
+        self.grid[(COLUMN_VOICE,1)] = TILE_HIGHHAT
+        self.grid[(COLUMN_VOICE,2)] = TILE_SNARE
+        self.grid[(COLUMN_VOICE,3)] = TILE_KICKDRUM
         # second column
-        self.grid[(1,1)] = TILE_MUTE_OFF
-        self.grid[(1,2)] = TILE_MUTE_ON
-        self.grid[(1,3)] = TILE_MUTE_OFF
+        self.grid[(COLUMN_MUTE,1)] = TILE_MUTE_OFF
+        self.grid[(COLUMN_MUTE,2)] = TILE_MUTE_ON
+        self.grid[(COLUMN_MUTE,3)] = TILE_MUTE_OFF
 
         # top whole note markers
         for col in range(GRID_X_MIN, GRID_X_MAX+1, 4):
@@ -117,10 +116,8 @@ class DrumSequencer(displayio.Group):
             for i in range(GRID_X_MIN,GRID_X_MAX):
                 self.grid[(i,j)] = TILE_EMPTY
 
-        self.highlighted = (5,2)
-
-        # bottom status bar
-        self.grid[(0,7)] = TILE_PLAY
+        self.highlighted = (2,1)
+        self.overlay[(2,1)] = TILE_HIGHLIGHT
         self.refresh()
 
     def refresh(self):
@@ -147,7 +144,6 @@ class DrumSequencer(displayio.Group):
                 self.grid[(1,j)] = TILE_MUTE_ON
             else:
                 self.grid[(1,j)] = TILE_MUTE_OFF
-
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
@@ -200,12 +196,8 @@ class DrumSequencer(displayio.Group):
             self.set_playing_column(col)
         self.set_playing_column(-1)
 
-
-
     def update(self, joy, key):
-        # print("updating sequencer")
         if joy:
-            # print(joy)
             if joy.pressed:
                 if joy.key_number == LEFT:
                     self.nav((-1,0))
@@ -216,15 +208,10 @@ class DrumSequencer(displayio.Group):
                 if joy.key_number == DOWN:
                     self.nav((0,1))
         if key:
-            # print(key)
-            self.keys[key.key_number] = key.pressed
-            # print(self.keys)
             if key.pressed and key.key_number == TOGGLE:
                 self.toggle()
             if key.pressed and key.key_number == PLAY:
                 self.playFromStart()
-            if KEY_START in self.keys and KEY_SELECT in self.keys and self.keys[KEY_START] and self.keys[KEY_SELECT]:
-                print("doing a screenshot")
         for voice in self.voices:
             voice.update()
 
