@@ -20,6 +20,8 @@ from menu import Menu
 import ulab.numpy as np
 from drumstep import DrumSequencer
 from joystick import JoystickEventManager
+import adafruit_bitmapsaver
+import traceback
 
 display = board.DISPLAY
 
@@ -133,6 +135,12 @@ while True:
         keys[key.key_number] = key.pressed
         if KEY_START in keys and KEY_SELECT in keys and keys[KEY_START] and keys[KEY_SELECT]:
             print("doing a screenshot")
+            try:
+                adafruit_bitmapsaver.save_pixels('/screenshot.bmp',pixel_source=display)
+                print("saved the screenshot")
+            except BaseException as e:
+                print("couldnt take screenshot")
+                print(''.join(traceback.format_exception(e)))
     sequencer.update(joystick.update(), key)
     pass
     # event = k.events.get()
