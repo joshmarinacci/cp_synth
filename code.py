@@ -22,9 +22,11 @@ from drumstep import DrumSequencer
 from joystick import JoystickEventManager
 import adafruit_bitmapsaver
 import traceback
+import storage
 
 display = board.DISPLAY
 
+font = terminalio.FONT
 # font glyphs are in a single very wide bitmap. 
 # every glyph has the same pixel size
 # every glyph has a tile index
@@ -63,20 +65,21 @@ display = board.DISPLAY
 # but we can't do a background, say, for inverted colors
 # but we *can* make the background transparent, or the foreground
 # so maybe if each row is a different tilegrid, then we can invert the selected one.
-# def draw_text2(bitmap, text, dx, dy):
-#     # bitmaptools.fill_region(bitmap, 0,0, 40,40, 2)
-#     print('font bitmap is',font.bitmap.width, font.bitmap.height)
-#     pal2 = displayio.Palette(2)
-#     pal2[0] = 0x00ff00
-#     pal2[1] = 0xff00ff
-#     pal2.make_transparent(1)
-#     grid2 = displayio.TileGrid(font.bitmap, pixel_shader=pal2, width=10 , height=1, tile_width=6, tile_height=12, x=0, y=0)
-#     for x,c in enumerate(text):
-#         print('x is',x,c,ord(c))
-#         grid2[x,0] = ord(c)-32
-#     group.append(grid2)
 
 group = displayio.Group()
+class DebugTextOverlay():
+    def __init__(self, font, text) -> None:
+        print('font bitmap is',font.bitmap.width, font.bitmap.height)
+        pal = displayio.Palette(2)
+        pal[0] = 0x000000
+        pal[1] = 0x000000
+        pal.make_transparent(1)
+        self.grid = displayio.TileGrid(font.bitmap, pixel_shader=pal, width=28 , height=1, tile_width=6, tile_height=12, x=0, y=0)
+    def setText(self, text):
+        for x,c in enumerate(text):
+            # print('x is',x,c,ord(c))
+            if x < self.grid.width:
+                self.grid[x,0] = ord(c)-32
 
 
 enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
@@ -84,12 +87,9 @@ enable.direction = digitalio.Direction.OUTPUT
 enable.value = True
 
 audio = AudioOut(board.SPEAKER, right_channel=board.A1)
-# audio = AudioOut(board.SPEAKER)
-
 mixer = audiomixer.Mixer(sample_rate=22050, buffer_size=2048, channel_count=1)
 audio.play(mixer)
 mixer.voice[0].level = 0.5  # 25% volume might be better
-
 
 # menu = Menu([
 #     {'label':'Play N50, default syn', 'action':audio_demo_1},
@@ -112,7 +112,6 @@ sequencer = DrumSequencer(mixer)
 group.append(sequencer)
 display.root_group = group
 
-
 k = keypad.ShiftRegisterKeys(
     clock=board.BUTTON_CLOCK,
     data=board.BUTTON_OUT,
@@ -121,37 +120,32 @@ k = keypad.ShiftRegisterKeys(
     value_when_pressed=True,
 )
 
-
 joystick = JoystickEventManager()
 
 KEY_START = 2
 KEY_SELECT = 3
 keys = {}
 
+debug = DebugTextOverlay(terminalio.FONT, 'foo')
+debug.grid.x = 0
+debug.grid.y = 9*12 + 8
+group.append(debug.grid)
 
+debug.setText("")
 while True:
     key = k.events.get()
     if key:
         keys[key.key_number] = key.pressed
         if KEY_START in keys and KEY_SELECT in keys and keys[KEY_START] and keys[KEY_SELECT]:
             print("doing a screenshot")
+            debug.setText("screenshot")
             try:
+                storage.remount("/", False)
                 adafruit_bitmapsaver.save_pixels('/screenshot.bmp',pixel_source=display)
                 print("saved the screenshot")
+                debug.setText("saved screenshot")
             except BaseException as e:
+                debug.setText("failed screenshot")
                 print("couldnt take screenshot")
                 print(''.join(traceback.format_exception(e)))
     sequencer.update(joystick.update(), key)
-    pass
-    # event = k.events.get()
-    # if event:
-    #     # print(event)
-    #     if(event.key_number == 1 and event.pressed):
-    #         menu.choose_active_item()
-    # event = joystick.update()
-    # if event:
-    #     if event.pressed and event.key_number == 32:
-    #         menu.goto_prev_item()
-    #     if event.pressed and event.key_number == 34:
-    #         menu.goto_next_item()
-
