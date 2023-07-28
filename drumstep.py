@@ -31,9 +31,21 @@ class Voice():
     def __init__(self, synth) -> None:
         self.synth = synth
         self.mute = False
-
+        self.playing = False
+        self.duration = 0.5
+        self.startTime = 0
     def trigger(self) -> None:
-        print("trigger must be implemented")
+        self.playing = True
+        self.startTime = time.monotonic()
+        self.onTrigger()
+    def onTrigger(self) -> None:
+        print("onTrigger must be implemented")
+    def update(self) -> None:
+        if self.playing:
+            if time.monotonic() - self.startTime > self.duration:
+                self.onEnd()
+    def onEnd(self) -> None:
+        print("on update must be implemented")
 
 class KickDrum(Voice):
     def __init__(self, synth) -> None:
@@ -57,10 +69,10 @@ class KickDrum(Voice):
         self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=0.095, release_time=0, attack_level=1, sustain_level=0)
         self.note3 = synthio.Note(frequency=41, envelope=self.amp_env3, waveform=sinwave2, filter=self.lpf, bend=self.lfo)
 
-    def trigger(self) -> None:
+    def onTrigger(self) -> None:
         self.lfo.retrigger()
         self.synth.press((self.note1, self.note2, self.note3))
-    def end(self) -> None:
+    def onEnd(self) -> None:
         self.synth.release((self.note1, self.note2, self.note3))
 
 class SnareDrum(Voice):
@@ -87,11 +99,11 @@ class SnareDrum(Voice):
         self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=w2, filter=self.lpf, bend=self.lfo)
 
 
-    def trigger(self) -> None:
+    def onTrigger(self) -> None:
         if not self.mute:
             self.lfo.retrigger()
             self.synth.press((self.note1, self.note2, self.note3))
-    def end(self) -> None:
+    def onEnd(self) -> None:
         if not self.mute:
             self.synth.release((self.note1, self.note2, self.note3))
 
@@ -119,11 +131,11 @@ class HighHat(Voice):
         self.amp_env3 = synthio.Envelope(attack_time=0.0, decay_time=t, release_time=0, attack_level=1, sustain_level=0)
         self.note3 = synthio.Note(frequency=165, envelope=self.amp_env3, waveform=noisewave, filter=self.hpf, bend=self.lfo)
 
-    def trigger(self) -> None:
+    def onTrigger(self) -> None:
         if not self.mute:
             self.lfo.retrigger()
             self.synth.press((self.note1, self.note2, self.note3))
-    def end(self) -> None:
+    def onEnd(self) -> None:
         if not self.mute:
             self.synth.release((self.note1, self.note2, self.note3))
 
@@ -245,6 +257,7 @@ class DrumSequencer(displayio.Group):
 
     def nav(self, d):
         newhi = (self.highlighted[0]+d[0], self.highlighted[1]+d[1])
+        print("nav to",newhi)
         if newhi[0] >= 1 and newhi[0] < GRID_X_MAX:
             if newhi[1] >= GRID_Y_MIN and newhi[1] < GRID_Y_MAX: 
                 self.highlighted = newhi
@@ -269,6 +282,8 @@ class DrumSequencer(displayio.Group):
         curr = self.get_at(self.highlighted)
         if(curr == CELL_EMP):
             self.set_at(self.highlighted,CELL_SEL)
+            voice = self.voices[self.highlighted[1] - GRID_Y_MIN]
+            voice.trigger()
         else:
             self.set_at(self.highlighted,CELL_EMP)
         self.refresh()
@@ -282,14 +297,7 @@ class DrumSequencer(displayio.Group):
                 self.snare.trigger()
             if self.cells[2][col] == CELL_SEL:
                 self.hihat.trigger()
-            time.sleep(0.2)
-            if self.cells[0][col] == CELL_SEL:
-                self.kick.end()
-            if self.cells[1][col] == CELL_SEL:
-                self.snare.end()
-            if self.cells[2][col] == CELL_SEL:
-                self.hihat.end()
-            time.sleep(0.2)
+            time.sleep(0.4)
             self.set_playing_column(col)
         self.set_playing_column(-1)
 
@@ -314,6 +322,8 @@ class DrumSequencer(displayio.Group):
                 self.toggle()
             if key.pressed and key.key_number == PLAY:
                 self.playFromStart()
+        for voice in self.voices:
+            voice.update()
 
 
 
