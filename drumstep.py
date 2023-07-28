@@ -193,11 +193,6 @@ class DrumSequencer(displayio.Group):
                                             default_tile=TILE_BLANK
                                             )
         self.append(self.grid)
-        # print(len(self.tiles_pal))
-        # for i,p in enumerate(self.tiles_pal):
-        #     # time.sleep(0.1)
-        #     if p != 65280:
-        #         print("print",i,self.tiles_pal.is_transparent(i),p)
         self.tiles_pal.make_transparent(0)
         self.overlay = displayio.TileGrid(self.tiles, pixel_shader=self.tiles_pal,
                                           width=12, height=8,
