@@ -16,7 +16,7 @@ import synthio
 import audiomixer
 from audioio import AudioOut
 from audiocore import RawSample
-from menu import Menu
+from menu import Menu, MenuNumberEditor, MenuItemAction, MenuHeader, SubMenu
 import ulab.numpy as np
 from drumstep import DrumSequencer
 from joystick import JoystickEventManager
@@ -82,34 +82,58 @@ class DebugTextOverlay():
                 self.grid[x,0] = ord(c)-32
 
 
-enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
-enable.direction = digitalio.Direction.OUTPUT
-enable.value = True
+# enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
+# enable.direction = digitalio.Direction.OUTPUT
+# enable.value = True
 
-audio = AudioOut(board.SPEAKER, right_channel=board.A1)
-mixer = audiomixer.Mixer(sample_rate=22050, buffer_size=2048, channel_count=1)
-audio.play(mixer)
-mixer.voice[0].level = 0.5  # 25% volume might be better
+# audio = AudioOut(board.SPEAKER, right_channel=board.A1)
+# mixer = audiomixer.Mixer(sample_rate=22050, buffer_size=2048, channel_count=1)
+# audio.play(mixer)
+# mixer.voice[0].level = 0.5  # 25% volume might be better
 
+volume = 0.5
+def get_volume():
+    print("getting the volume")
+    return volume
+
+def print_hello():
+    print('hello')
+
+def set_volume(val):
+    global volume
+    print('setting the volume')
+    volume = val
+
+menu = Menu([
+    MenuHeader(title='MENU'),
+    MenuItemAction(action=print_hello, title='print hello'),
+    MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
+    SubMenu([
+        MenuHeader(title='a sub menu'),
+        MenuItemAction(action=print_hello, title='print hello'),
+        MenuItemAction(action=print_hello, title='print hello'),
+        MenuItemAction(action=print_hello, title='print hello'),
+    ], title='SubMenu')
+], title='Main Menu')    
 # menu = Menu([
-#     {'label':'Play N50, default syn', 'action':audio_demo_1},
-#     {'label':'Play Chord','action':demo_play_chord},
-#     {'label':'Chord w/ ADSR', 'action':demo_with_adsr},
-#     {'label':'vibrato','action':demo_vibrato},
-#     {'label':'tremolo', 'action':demo_tremolo},
-#     {'label':'saw wave', 'action':demo_sine_wave},
-#     {'label':'fat saw wave', 'action':demo_fatsaw},
-#     {'label':'kick drum', 'action':demo_kickdrum},
-#     {'label':'snare drum', 'action':demo_snare},
-#     {'label':'high hat', 'action':demo_highhat},
-#     ],
-#     bgcolor=0xff0000,
-#     fgcolor=0xffffff)
-# group.append(menu.grids)
+    # {'label':'Play N50, default syn', 'action':audio_demo_1},
+    # {'label':'Play Chord','action':demo_play_chord},
+    # {'label':'Chord w/ ADSR', 'action':demo_with_adsr},
+    # {'label':'vibrato','action':demo_vibrato},
+    # {'label':'tremolo', 'action':demo_tremolo},
+    # {'label':'saw wave', 'action':demo_sine_wave},
+    # {'label':'fat saw wave', 'action':demo_fatsaw},
+    # {'label':'kick drum', 'action':demo_kickdrum},
+    # {'label':'snare drum', 'action':demo_snare},
+    # {'label':'high hat', 'action':demo_highhat},
+    # ],
+    # bgcolor=0xff0000,
+    # fgcolor=0xffffff)
+group.append(menu)
 # draw_text2(bitmap, 'hello', 20, 10)
 
-sequencer = DrumSequencer(mixer)
-group.append(sequencer)
+# sequencer = DrumSequencer(mixer)
+# group.append(sequencer)
 display.root_group = group
 
 k = keypad.ShiftRegisterKeys(
@@ -132,20 +156,26 @@ debug.grid.y = 9*12 + 8
 group.append(debug.grid)
 
 debug.setText("")
+
+def do_screenshot():
+    print("doing a screenshot")
+    debug.setText("screenshot")
+    try:
+        storage.remount("/", False)
+        adafruit_bitmapsaver.save_pixels('/screenshot.bmp',pixel_source=display)
+        print("saved the screenshot")
+        debug.setText("saved screenshot")
+    except BaseException as e:
+        debug.setText("failed screenshot")
+        print("couldnt take screenshot")
+        print(''.join(traceback.format_exception(e)))
+
 while True:
     key = k.events.get()
     if key:
         keys[key.key_number] = key.pressed
         if KEY_START in keys and KEY_SELECT in keys and keys[KEY_START] and keys[KEY_SELECT]:
-            print("doing a screenshot")
-            debug.setText("screenshot")
-            try:
-                storage.remount("/", False)
-                adafruit_bitmapsaver.save_pixels('/screenshot.bmp',pixel_source=display)
-                print("saved the screenshot")
-                debug.setText("saved screenshot")
-            except BaseException as e:
-                debug.setText("failed screenshot")
-                print("couldnt take screenshot")
-                print(''.join(traceback.format_exception(e)))
-    sequencer.update(joystick.update(), key)
+            do_screenshot()
+    joy = joystick.update()
+    # sequencer.update(joy, key)
+    menu.update(joy,key)
