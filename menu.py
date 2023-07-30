@@ -41,9 +41,38 @@ class MenuHeader(MenuItem):
         super().set_active(active)
         self.grid.pixel_shader[0] = self.bg_color
         self.grid.pixel_shader[1] = self.fg_color
+        if active:
+            self.grid.pixel_shader.make_opaque(0)
+        else:
+            self.grid.pixel_shader.make_transparent(0)
     def update(self, joy, key):
         pass
 
+class MenuItemBack(MenuItem):
+    def __init__(self):
+        super().__init__()
+        pal2 = displayio.Palette(2)
+        pal2[0] = self.bg_color
+        pal2[1] = self.fg_color
+        pal2.make_transparent(0)
+        self.pal = pal2
+        self.grid = displayio.TileGrid(font.bitmap, pixel_shader=pal2, width=30, height=1, tile_width=6, tile_height=12)
+        for i,ch in enumerate('< back'):
+            self.grid[i,0] = ord(ch)-32
+        self.append(self.grid)
+    def set_active(self, active) -> None:
+        super().set_active(active)
+        self.grid.pixel_shader[0] = self.bg_color
+        self.grid.pixel_shader[1] = self.fg_color
+        if active:
+            self.grid.pixel_shader.make_opaque(0)
+        else:
+            self.grid.pixel_shader.make_transparent(0)
+    def update(self, joy, key):
+        if key and key.pressed:
+            if key.key_number == 1:
+                self.parent_menu.pop_menu()
+        
 class MenuItemAction(MenuItem):
     def __init__(self, action, title='title') -> None:
         super().__init__()
@@ -67,14 +96,17 @@ class MenuItemAction(MenuItem):
         else:
             self.grid.pixel_shader.make_transparent(0)
     def update(self, joy, key):
-        if hasattr(self,'action'):
-            self.action()
+        if key and key.key_number == 1:
+            if hasattr(self,'action'):
+                self.action()
 
 class SubMenu(MenuItem):
     def __init__(self, rows, title='submenu title' ):
         super().__init__()
+        self.title = title
         self.rows = rows
-        print("making a sub menu")    
+        self.rows.insert(0,MenuHeader(title='a sub menu'))
+        self.rows.append(MenuItemBack())
         pal2 = displayio.Palette(2)
         pal2[0] = self.bg_color
         pal2[1] = self.fg_color
@@ -99,12 +131,15 @@ class SubMenu(MenuItem):
                 self.nav_up()
             if joy.key_number == RIGHT:
                 self.nav_sub()
+        if key and key.pressed:
+            if key.key_number == 1:
+                self.nav_sub()
+
     def nav_sub(self):
-        self.parent_menu.push_menu(self.rows)
+        self.parent_menu.push_menu(self.rows, self.title)
         
     def nav_up(self):
         print("going up")
-        
 
 class MenuNumberEditor(MenuItem):
     def __init__(self, getter, setter, min=0, max=100, step=1, title='value'):
@@ -185,7 +220,7 @@ class MenuNumberEditor(MenuItem):
 class Menu(displayio.Group):
     def __init__(self, rows, bgcolor=0x000000, fgcolor=0xffffff, title='title') -> None:
         super().__init__()
-        print("making",title,"a menu with",len(rows),'rows')
+        print("making menu: ",title)
         self.title = title
         self.rows = rows
         self.grids = displayio.Group()
@@ -199,32 +234,41 @@ class Menu(displayio.Group):
         self.append(self.backdrop)
 
         for j, row in enumerate(self.rows):
-            # print(j,row)
             row.parent_menu = self
             self.grids.append(row)
             row.y = j*12
             row.x = 0
         self.append(self.grids)
         self.subbed = False
+    def shutdown(self):
+        for j, row in enumerate(self.rows):
+            self.grids.remove(row)
+        self.remove(self.grids)
 
     def update(self, joy, key):
         if self.subbed:
             self.submenu.update(joy,key)
             return
+        if key and key.pressed:
+            if key.key_number == 1:
+                self.grids[self.active].update(joy,key)
+                return
+
         if joy and joy.pressed:
-            if joy.key_number == LEFT:
-                print("i am",self.title)
-                if hasattr(self, 'parent_menu'):
-                    print("going back up")
-                    self.parent_menu.pop_menu(self)
-                    return
-                self.grids[self.active].update(joy,key)
-            if joy.key_number == RIGHT:
-                self.grids[self.active].update(joy,key)
+            # if joy.key_number == LEFT:
+            #     if hasattr(self, 'parent_menu'):
+            #         self.parent_menu.pop_menu(self)
+            #         return
+            #     self.grids[self.active].update(joy,key)
+            # if joy.key_number == RIGHT:
+            #     self.grids[self.active].update(joy,key)
             if joy.key_number == UP:
                 self.goto_prev_item()
+                return
             if joy.key_number == DOWN:
                 self.goto_next_item()
+                return
+        self.grids[self.active].update(joy,key)
 
     def update_colors(self):
         for j, grid in enumerate(self.grids):
@@ -245,17 +289,17 @@ class Menu(displayio.Group):
         self.active = (self.active + 1) % len(self.grids)
         self.grids[self.active].set_active(True)
 
-    def choose_active_item(self):
-        print('going to do the action', self.active)
-        print('doing',self.rows[self.active])
-        self.rows[self.active]['action']()
-    def push_menu(self,rows):
+    def push_menu(self,rows, title):
         self.subbed = True
-        self.submenu = Menu(rows)
+        print("pushing menu. new menu:",title)
+        self.submenu = Menu(rows, title=title)
         self.submenu.parent_menu = self
         self.submenu.x = 0
         self.append(self.submenu)
-    def pop_menu(self, menu):
-        self.subbed = False
-        self.remove(menu)
+
+    def pop_menu(self):
+        print("popping the menu: ",self.title)
+        self.parent_menu.remove(self)
+        self.parent_menu.subbed = False
+        self.shutdown()
 

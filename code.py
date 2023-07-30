@@ -109,11 +109,10 @@ menu = Menu([
     MenuItemAction(action=print_hello, title='print hello'),
     MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
     SubMenu([
-        MenuHeader(title='a sub menu'),
         MenuItemAction(action=print_hello, title='print hello'),
         MenuItemAction(action=print_hello, title='print hello'),
         MenuItemAction(action=print_hello, title='print hello'),
-    ], title='SubMenu')
+    ], title='go to sub menu')
 ], title='Main Menu')    
 # menu = Menu([
     # {'label':'Play N50, default syn', 'action':audio_demo_1},
