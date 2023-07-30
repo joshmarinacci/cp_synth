@@ -3,6 +3,7 @@ import time
 import adafruit_imageload
 import ulab.numpy as np
 import synthio
+from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor
 
 from drums import SAMPLE_RATE, KickDrum, SnareDrum, HighHat
 
@@ -59,6 +60,50 @@ GRID_Y_MAX = 4
 COLUMN_VOICE = 0
 COLUMN_MUTE = 1
 
+class VoiceSettings():
+    def __init__(self, voice, synth) -> None:
+        self.voice = voice
+        self.freq = 50
+        self.synth = synth
+
+        self.attack_time   = 0.1
+        self.decay_time    = 0.05
+        self.release_time  = 0.2
+        
+        self.attack_level  = 1.0
+        self.sustain_level = 0.8
+
+        self.menu = Menu([
+            MenuHeader(title='Voice Settings '),
+            MenuHeader(title=voice.title),
+            # MenuItemAction(title='waveform', action=self.choose_waveform),
+            # MenuNumberEditor(getter=self.get_freq, setter=self.set_freq,  title='frequency', min=20, max=200, step=10)
+            MenuNumberEditor(title='A level %', target=self, prop='attack_level',  min=0, max=1, step=0.1,  onInput=self.play_tone),
+            MenuNumberEditor(title='A time  s', target=self, prop='attack_time',   min=0, max=1, step=0.05, onInput=self.play_tone),
+            MenuNumberEditor(title='D time  s', target=self, prop='decay_time',    min=0, max=1, step=0.05, onInput=self.play_tone),
+            MenuNumberEditor(title='S level %', target=self, prop='sustain_level', min=0, max=1, step=0.1,  onInput=self.play_tone),
+            MenuNumberEditor(title='R time  s', target=self, prop='release_time',  min=0, max=1, step=0.05, onInput=self.play_tone),
+        ])
+    def play_tone(self, joy, key):
+        if key and key.key_number == 2:
+            if key.pressed:
+                adsr = synthio.Envelope(
+                    attack_time=self.attack_time,
+                    decay_time=self.decay_time,
+                    release_time=self.release_time,
+                    attack_level=self.attack_level,
+                    sustain_level=self.sustain_level,
+                )
+                self.test_note = synthio.Note(frequency=90, envelope=adsr)
+                self.synth.press(self.test_note)
+            if key.released:
+                self.synth.release(self.test_note)
+
+    def choose_waveform(self):
+        print("choosing the waveform")
+    
+
+
 class DrumSequencer(displayio.Group):
     def __init__(self, mixer) -> None:
         super().__init__()
@@ -86,7 +131,6 @@ class DrumSequencer(displayio.Group):
                                           default_tile=TILE_CLEAR
                                           )
         self.append(self.overlay)
-        print("overlay",self.overlay)
 
         self.cells = []
         for j in range(0, GRID_Y_MAX-GRID_Y_MIN):
@@ -115,6 +159,8 @@ class DrumSequencer(displayio.Group):
         self.highlighted = (2,1)
         self.overlay[(2,1)] = TILE_HIGHLIGHT
         self.refresh()
+
+        self.menu_showing = False
 
     def refresh(self):
         for j in range(GRID_Y_MIN, GRID_Y_MAX):
@@ -159,14 +205,13 @@ class DrumSequencer(displayio.Group):
         self.refresh()
 
     def toggle(self):
+        if(self.highlighted[0] == COLUMN_VOICE):
+            voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
+            self.open_voice_menu(voice)
+            return
         if(self.highlighted[0] == COLUMN_MUTE):
             voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
             voice.mute = not voice.mute
-            self.refresh()
-            return
-        if(self.highlighted[0] == COLUMN_VOICE):
-            voice = self.voices[self.highlighted[1]-GRID_Y_MIN]
-            print('doing voice settings for',voice)
             self.refresh()
             return
         curr = self.get_at(self.highlighted)
@@ -192,6 +237,11 @@ class DrumSequencer(displayio.Group):
         self.set_playing_column(-1)
 
     def update(self, joy, key):
+        for voice in self.voices:
+            voice.update()
+        if self.menu_showing:
+            self.settings.menu.update(joy,key)
+            return
         if joy:
             if joy.pressed:
                 if joy.key_number == LEFT:
@@ -207,8 +257,10 @@ class DrumSequencer(displayio.Group):
                 self.toggle()
             if key.pressed and key.key_number == PLAY:
                 self.playFromStart()
-        for voice in self.voices:
-            voice.update()
 
+    def open_voice_menu(self, voice):
+        self.settings = VoiceSettings(voice,self.synth)
+        self.append(self.settings.menu)
+        self.menu_showing = True
 
 

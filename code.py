@@ -82,14 +82,14 @@ class DebugTextOverlay():
                 self.grid[x,0] = ord(c)-32
 
 
-# enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
-# enable.direction = digitalio.Direction.OUTPUT
-# enable.value = True
+enable = digitalio.DigitalInOut(board.SPEAKER_ENABLE)
+enable.direction = digitalio.Direction.OUTPUT
+enable.value = True
 
-# audio = AudioOut(board.SPEAKER, right_channel=board.A1)
-# mixer = audiomixer.Mixer(sample_rate=22050, buffer_size=2048, channel_count=1)
-# audio.play(mixer)
-# mixer.voice[0].level = 0.5  # 25% volume might be better
+audio = AudioOut(board.SPEAKER, right_channel=board.A1)
+mixer = audiomixer.Mixer(sample_rate=22050, buffer_size=2048, channel_count=1)
+audio.play(mixer)
+mixer.voice[0].level = 0.5  # 25% volume might be better
 
 volume = 0.5
 def get_volume():
@@ -104,16 +104,16 @@ def set_volume(val):
     print('setting the volume')
     volume = val
 
-menu = Menu([
-    MenuHeader(title='MENU'),
-    MenuItemAction(action=print_hello, title='print hello'),
-    MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
-    SubMenu([
-        MenuItemAction(action=print_hello, title='print hello'),
-        MenuItemAction(action=print_hello, title='print hello'),
-        MenuItemAction(action=print_hello, title='print hello'),
-    ], title='go to sub menu >')
-], title='Main Menu')    
+# menu = Menu([
+#     MenuHeader(title='MENU'),
+#     MenuItemAction(action=print_hello, title='print hello'),
+#     MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
+#     SubMenu([
+#         MenuItemAction(action=print_hello, title='print hello'),
+#         MenuItemAction(action=print_hello, title='print hello'),
+#         MenuItemAction(action=print_hello, title='print hello'),
+#     ], title='go to sub menu >')
+# ], title='Main Menu')    
 # menu = Menu([
     # {'label':'Play N50, default syn', 'action':audio_demo_1},
     # {'label':'Play Chord','action':demo_play_chord},
@@ -128,11 +128,12 @@ menu = Menu([
     # ],
     # bgcolor=0xff0000,
     # fgcolor=0xffffff)
-group.append(menu)
+# group.append(menu)
 # draw_text2(bitmap, 'hello', 20, 10)
 
-# sequencer = DrumSequencer(mixer)
-# group.append(sequencer)
+
+sequencer = DrumSequencer(mixer)
+group.append(sequencer)
 display.root_group = group
 
 k = keypad.ShiftRegisterKeys(
@@ -176,5 +177,4 @@ while True:
         if KEY_START in keys and KEY_SELECT in keys and keys[KEY_START] and keys[KEY_SELECT]:
             do_screenshot()
     joy = joystick.update()
-    # sequencer.update(joy, key)
-    menu.update(joy,key)
+    sequencer.update(joy, key)

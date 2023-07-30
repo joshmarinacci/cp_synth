@@ -19,6 +19,7 @@ class Voice():
         self.playing = False
         self.duration = 0.5
         self.startTime = 0
+        self.title = 'unamed'
     def trigger(self) -> None:
         self.playing = True
         self.startTime = time.monotonic()
@@ -35,6 +36,7 @@ class Voice():
 class KickDrum(Voice):
     def __init__(self, synth) -> None:
         super().__init__(synth)
+        self.title = 'kick drum'
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
         self.lfo.once = True
@@ -63,7 +65,7 @@ class KickDrum(Voice):
 class SnareDrum(Voice):
     def __init__(self, synth) -> None:
         super().__init__(synth)
-
+        self.title = 'snare drum'
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
         self.lfo.once = True
@@ -95,7 +97,8 @@ class SnareDrum(Voice):
 class HighHat(Voice):
     def __init__(self, synth) -> None:
         super().__init__(synth)
-
+        self.title = 'high hat'
+        
         # kick drum
         self.lfo = synthio.LFO(waveform=downwave)
         self.lfo.once = True

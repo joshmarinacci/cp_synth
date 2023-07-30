@@ -88,14 +88,15 @@ class SubMenu(MenuTextItem):
         self.parent_menu.push_menu(self.rows, self.title)
 
 class MenuNumberEditor(MenuItem):
-    def __init__(self, getter, setter, min=0, max=100, step=1, title='value'):
+    def __init__(self, target, prop, min=0, max=100, step=1, title='value', onInput=None):
         super().__init__()
-        self.getter = getter
-        self.setter = setter
+        self.target = target
+        self.prop = prop
         self.title = title
         self.min = min
         self.max = max
         self.step = step
+        self.onInput = onInput
         pal2 = displayio.Palette(2)
         pal2[0] = self.bg_color
         pal2[1] = self.fg_color
@@ -123,7 +124,7 @@ class MenuNumberEditor(MenuItem):
             self.label.pixel_shader.make_transparent(0)
 
     def refresh(self):
-        val = self.getter()
+        val = getattr(self.target,self.prop)
         for i in range(self.value.width):
             self.value[i] = 0
         text = str(val)
@@ -139,30 +140,34 @@ class MenuNumberEditor(MenuItem):
 
 
     def update(self, joy, key):
+        if key:
+            print(key)
         if joy and joy.pressed:
             if joy.key_number == LEFT:
                 self.decrement()
             if joy.key_number == RIGHT:
                 self.increment()
+        if self.onInput:
+            self.onInput(joy,key)
 
     def increment(self):
-        val = self.getter()
+        val = getattr(self.target,self.prop)
         print("value was",val)
         val = val + self.step
         if val > self.max:
             val = self.max
         print("value is now",val)
-        self.setter(val)
+        setattr(self.target,self.prop, val)
         self.refresh()
 
     def decrement(self):
-        val = self.getter()
+        val = getattr(self.target,self.prop)
         print("value was",val)
         val = val - self.step
         if val < self.min:
             val = self.min
         print("value is now",val)
-        self.setter(val)
+        setattr(self.target,self.prop, val)
         self.refresh()
 
 
