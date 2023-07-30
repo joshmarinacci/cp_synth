@@ -104,33 +104,6 @@ def set_volume(val):
     print('setting the volume')
     volume = val
 
-# menu = Menu([
-#     MenuHeader(title='MENU'),
-#     MenuItemAction(action=print_hello, title='print hello'),
-#     MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
-#     SubMenu([
-#         MenuItemAction(action=print_hello, title='print hello'),
-#         MenuItemAction(action=print_hello, title='print hello'),
-#         MenuItemAction(action=print_hello, title='print hello'),
-#     ], title='go to sub menu >')
-# ], title='Main Menu')    
-# menu = Menu([
-    # {'label':'Play N50, default syn', 'action':audio_demo_1},
-    # {'label':'Play Chord','action':demo_play_chord},
-    # {'label':'Chord w/ ADSR', 'action':demo_with_adsr},
-    # {'label':'vibrato','action':demo_vibrato},
-    # {'label':'tremolo', 'action':demo_tremolo},
-    # {'label':'saw wave', 'action':demo_sine_wave},
-    # {'label':'fat saw wave', 'action':demo_fatsaw},
-    # {'label':'kick drum', 'action':demo_kickdrum},
-    # {'label':'snare drum', 'action':demo_snare},
-    # {'label':'high hat', 'action':demo_highhat},
-    # ],
-    # bgcolor=0xff0000,
-    # fgcolor=0xffffff)
-# group.append(menu)
-# draw_text2(bitmap, 'hello', 20, 10)
-
 
 sequencer = DrumSequencer(mixer)
 group.append(sequencer)
@@ -149,19 +122,6 @@ joystick = JoystickEventManager()
 KEY_START = 2
 KEY_SELECT = 3
 keys = {}
-
-# menu = Menu([
-#     MenuHeader(title='MENU'),
-#     MenuItemAction(action=print_hello, title='print hello'),
-#     MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
-#     SubMenu([
-#         MenuItemAction(action=print_hello, title='print hello'),
-#         MenuItemAction(action=print_hello, title='print hello'),
-#         MenuItemAction(action=print_hello, title='print hello'),
-#     ], title='go to sub menu >')
-# ], title='Main Menu')    
-# menu.hidden = True
-# group.append(menu)
 
 debug = DebugTextOverlay(terminalio.FONT, 'foo')
 debug.grid.x = 0

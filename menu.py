@@ -171,6 +171,47 @@ class MenuNumberEditor(MenuItem):
         setattr(self.target,self.prop, val)
         self.refresh()
 
+class MenuBooleanEditor(MenuItem):
+    def __init__(self, target, prop, title='value', onInput=None):
+        super().__init__()
+        self.target = target
+        self.prop = prop
+        self.title = title
+        self.onInput = onInput
+        pal2 = displayio.Palette(2)
+        pal2[0] = self.bg_color
+        pal2[1] = self.fg_color
+        pal2.make_transparent(0)
+        self.label = displayio.TileGrid(font.bitmap, pixel_shader=pal2, width=20, height=1, tile_width=6, tile_height=12)
+        self.append(self.label)
+        for i,ch in enumerate(title):
+            self.label[i] = ord(ch)-32
+        self.editor = displayio.TileGrid(menu_bitmap, pixel_shader=menu_pal, width=10, height=1, tile_width=6, tile_height=12, default_tile=3)
+        self.editor.x = (len(title) + 1)*6
+        self.append(self.editor)
+        self.refresh()
+    def set_active(self, active) -> None:
+        super().set_active(active)
+        self.label.pixel_shader[0] = self.bg_color
+        self.label.pixel_shader[1] = self.fg_color
+        if active:
+            self.label.pixel_shader.make_opaque(0)
+        else:
+            self.label.pixel_shader.make_transparent(0)
+    def refresh(self):
+        val = getattr(self.target,self.prop)
+        # for i in range(self.value.width):
+            # self.value[i] = 0
+    def update(self, joy, key):
+        if key and key.key_number == ACTION and key.pressed:
+            print(key)
+            val = getattr(self.target, self.prop)
+            val = not val
+            setattr(self.target, self.prop, val)
+        if self.onInput:
+            self.onInput(joy,key)
+
+
 
 class Menu(displayio.Group):
     def __init__(self, rows, bgcolor=0x000000, fgcolor=0xffffff, title='title') -> None:

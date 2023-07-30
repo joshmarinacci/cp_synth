@@ -3,7 +3,7 @@ import time
 import adafruit_imageload
 import ulab.numpy as np
 import synthio
-from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor, SubMenu
+from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor, SubMenu, MenuBooleanEditor
 
 from drums import SAMPLE_RATE, KickDrum, SnareDrum, HighHat
 
@@ -81,6 +81,7 @@ class VoiceSettings():
         self.attack_level  = 100
         self.sustain_level = 80
 
+        self.lpf_enabled = True
         self.lpf_freq = 2000
         self.lpf_q = 1.5
         self.menu = Menu([
@@ -93,6 +94,7 @@ class VoiceSettings():
                 MenuNumberEditor(title='S level', target=self, prop='sustain_level', min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
                 MenuNumberEditor(title='R time ', target=self, prop='release_time',  min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
             ], title='Amplitude ADSR >'),
+            MenuBooleanEditor(title='lpf enabled', target=self, prop='lpf_enabled',onInput=self.play_tone),
             MenuNumberEditor(title='lpf freq', target=self, prop='lpf_freq',  min=0, max=10000, step=1000, onInput=self.play_tone, unit='hz'),
             MenuNumberEditor(title='lpf q   ', target=self, prop='lpf_q',     min=0, max=5, step=0.25,  onInput=self.play_tone, unit=''),
             MenuItemAction(title='^ done', action=self.close),
@@ -114,7 +116,10 @@ class VoiceSettings():
                     sustain_level=self.sustain_level/100,
                 )
                 midi_note = 65
-                lpf = self.synth.low_pass_filter(self.lpf_freq,self.lpf_q)
+                print('enabled', self.lpf_enabled)
+                lpf = None
+                if self.lpf_enabled:
+                    lpf = self.synth.low_pass_filter(self.lpf_freq,self.lpf_q)
                 self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wave_saw, envelope=adsr, filter=lpf)
                 self.synth.press(self.test_note)
             if key.released:
