@@ -3,9 +3,15 @@ import time
 import adafruit_imageload
 import ulab.numpy as np
 import synthio
-from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor
+from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor, SubMenu
 
 from drums import SAMPLE_RATE, KickDrum, SnareDrum, HighHat
+
+SAMPLE_SIZE = 512
+SAMPLE_VOLUME = 32000  # 0-32767
+wave_sine = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
+wave_saw = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+
 
 # a bar is 4 whole notes
 # there are 16 steps, each a quarter note
@@ -27,6 +33,7 @@ DOWN = 34
 LEFT = 35
 KEY_START = 2
 KEY_SELECT = 3
+KEY_BACK = 0
 
 
 TOGGLE = 1
@@ -66,35 +73,37 @@ class VoiceSettings():
         self.freq = 50
         self.synth = synth
 
-        self.attack_time   = 0.1
-        self.decay_time    = 0.05
-        self.release_time  = 0.2
+        self.attack_time   = 50
+        self.decay_time    = 100
+        self.release_time  = 200
         
-        self.attack_level  = 1.0
-        self.sustain_level = 0.8
+        self.attack_level  = 100
+        self.sustain_level = 80
 
         self.menu = Menu([
             MenuHeader(title='Voice Settings '),
             MenuHeader(title=voice.title),
+            SubMenu([
+                MenuNumberEditor(title='A level', target=self, prop='attack_level',  min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
+                MenuNumberEditor(title='A time ', target=self, prop='attack_time',   min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
+                MenuNumberEditor(title='D time ', target=self, prop='decay_time',    min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
+                MenuNumberEditor(title='S level', target=self, prop='sustain_level', min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
+                MenuNumberEditor(title='R time ', target=self, prop='release_time',  min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
+            ], title='Amplitude ADSR >'),
             # MenuItemAction(title='waveform', action=self.choose_waveform),
-            # MenuNumberEditor(getter=self.get_freq, setter=self.set_freq,  title='frequency', min=20, max=200, step=10)
-            MenuNumberEditor(title='A level %', target=self, prop='attack_level',  min=0, max=1, step=0.1,  onInput=self.play_tone),
-            MenuNumberEditor(title='A time  s', target=self, prop='attack_time',   min=0, max=1, step=0.05, onInput=self.play_tone),
-            MenuNumberEditor(title='D time  s', target=self, prop='decay_time',    min=0, max=1, step=0.05, onInput=self.play_tone),
-            MenuNumberEditor(title='S level %', target=self, prop='sustain_level', min=0, max=1, step=0.1,  onInput=self.play_tone),
-            MenuNumberEditor(title='R time  s', target=self, prop='release_time',  min=0, max=1, step=0.05, onInput=self.play_tone),
         ])
     def play_tone(self, joy, key):
-        if key and key.key_number == 2:
+        if key and (key.key_number == 2 or key.key_number == 1):
             if key.pressed:
                 adsr = synthio.Envelope(
-                    attack_time=self.attack_time,
-                    decay_time=self.decay_time,
-                    release_time=self.release_time,
-                    attack_level=self.attack_level,
-                    sustain_level=self.sustain_level,
+                    attack_time=self.attack_time/500,
+                    decay_time=self.decay_time/500,
+                    release_time=self.release_time/500,
+                    attack_level=self.attack_level/100,
+                    sustain_level=self.sustain_level/100,
                 )
-                self.test_note = synthio.Note(frequency=90, envelope=adsr)
+                midi_note = 65
+                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wave_saw, envelope=adsr)
                 self.synth.press(self.test_note)
             if key.released:
                 self.synth.release(self.test_note)
@@ -107,7 +116,6 @@ class VoiceSettings():
 class DrumSequencer(displayio.Group):
     def __init__(self, mixer) -> None:
         super().__init__()
-
 
         self.synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE)
         mixer.voice[0].play(self.synth)

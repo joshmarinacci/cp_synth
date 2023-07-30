@@ -88,7 +88,7 @@ class SubMenu(MenuTextItem):
         self.parent_menu.push_menu(self.rows, self.title)
 
 class MenuNumberEditor(MenuItem):
-    def __init__(self, target, prop, min=0, max=100, step=1, title='value', onInput=None):
+    def __init__(self, target, prop, min=0, max=100, step=1, title='value', onInput=None, unit=' '):
         super().__init__()
         self.target = target
         self.prop = prop
@@ -97,6 +97,7 @@ class MenuNumberEditor(MenuItem):
         self.max = max
         self.step = step
         self.onInput = onInput
+        self.unit = unit
         pal2 = displayio.Palette(2)
         pal2[0] = self.bg_color
         pal2[1] = self.fg_color
@@ -127,7 +128,7 @@ class MenuNumberEditor(MenuItem):
         val = getattr(self.target,self.prop)
         for i in range(self.value.width):
             self.value[i] = 0
-        text = str(val)
+        text = str(val) + self.unit
         for i,ch in enumerate(text):
             self.value[i] = ord(ch)-32
 
@@ -183,7 +184,7 @@ class Menu(displayio.Group):
 
         pal = displayio.Palette(1)
         pal[0] = 0xff0000
-        self.backdrop = vectorio.Rectangle(pixel_shader=pal, width=160, height=80, x=0, y=0)
+        self.backdrop = vectorio.Rectangle(pixel_shader=pal, width=160, height=120, x=0, y=0)
         self.append(self.backdrop)
 
         for j, row in enumerate(self.rows):

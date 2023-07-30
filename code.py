@@ -149,7 +149,6 @@ joystick = JoystickEventManager()
 KEY_START = 2
 KEY_SELECT = 3
 keys = {}
-
 debug = DebugTextOverlay(terminalio.FONT, 'foo')
 debug.grid.x = 0
 debug.grid.y = 9*12 + 8
@@ -169,6 +168,7 @@ def do_screenshot():
         debug.setText("failed screenshot")
         print("couldnt take screenshot")
         print(''.join(traceback.format_exception(e)))
+
 
 while True:
     key = k.events.get()
