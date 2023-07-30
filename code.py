@@ -112,7 +112,7 @@ menu = Menu([
         MenuItemAction(action=print_hello, title='print hello'),
         MenuItemAction(action=print_hello, title='print hello'),
         MenuItemAction(action=print_hello, title='print hello'),
-    ], title='go to sub menu')
+    ], title='go to sub menu >')
 ], title='Main Menu')    
 # menu = Menu([
     # {'label':'Play N50, default syn', 'action':audio_demo_1},
