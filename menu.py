@@ -12,6 +12,7 @@ ACTION = 1
 BACK = 0
 
 menu_bitmap, menu_pal = adafruit_imageload.load("menu.bmp")
+menu_pal.make_transparent(0)
 
 class MenuItem(displayio.Group):
     def __init__(self):
@@ -135,9 +136,9 @@ class MenuNumberEditor(MenuItem):
         t = (val- self.min) / self.max - self.min
         for i in range(self.editor.width):
             if i >= (t * self.editor.width):
-                self.editor[i] = 3
+                self.editor[i] = 1
             else:
-                self.editor[i] = 2
+                self.editor[i] = 0
 
 
     def update(self, joy, key):
@@ -186,10 +187,11 @@ class MenuBooleanEditor(MenuItem):
         self.append(self.label)
         for i,ch in enumerate(title):
             self.label[i] = ord(ch)-32
-        self.editor = displayio.TileGrid(menu_bitmap, pixel_shader=menu_pal, width=10, height=1, tile_width=6, tile_height=12, default_tile=3)
+        self.editor = displayio.TileGrid(menu_bitmap, pixel_shader=menu_pal, width=2, height=1, tile_width=6, tile_height=12, default_tile=2)
         self.editor.x = (len(title) + 1)*6
         self.append(self.editor)
         self.refresh()
+
     def set_active(self, active) -> None:
         super().set_active(active)
         self.label.pixel_shader[0] = self.bg_color
@@ -198,16 +200,24 @@ class MenuBooleanEditor(MenuItem):
             self.label.pixel_shader.make_opaque(0)
         else:
             self.label.pixel_shader.make_transparent(0)
+
     def refresh(self):
         val = getattr(self.target,self.prop)
-        # for i in range(self.value.width):
-            # self.value[i] = 0
+        print("boolean value",val)
+        if val == True:
+            self.editor[0] = 2
+            self.editor[1] = 3
+        else:
+            self.editor[0] = 4
+            self.editor[1] = 5
+
     def update(self, joy, key):
         if key and key.key_number == ACTION and key.pressed:
             print(key)
             val = getattr(self.target, self.prop)
             val = not val
             setattr(self.target, self.prop, val)
+            self.refresh()
         if self.onInput:
             self.onInput(joy,key)
 
