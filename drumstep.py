@@ -68,10 +68,11 @@ COLUMN_VOICE = 0
 COLUMN_MUTE = 1
 
 class VoiceSettings():
-    def __init__(self, voice, synth) -> None:
+    def __init__(self, voice, synth, seq) -> None:
         self.voice = voice
         self.freq = 50
         self.synth = synth
+        self.seq = seq
 
         self.attack_time   = 50
         self.decay_time    = 100
@@ -80,6 +81,8 @@ class VoiceSettings():
         self.attack_level  = 100
         self.sustain_level = 80
 
+        self.lpf_freq = 2000
+        self.lpf_q = 1.5
         self.menu = Menu([
             MenuHeader(title='Voice Settings '),
             MenuHeader(title=voice.title),
@@ -90,9 +93,17 @@ class VoiceSettings():
                 MenuNumberEditor(title='S level', target=self, prop='sustain_level', min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
                 MenuNumberEditor(title='R time ', target=self, prop='release_time',  min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
             ], title='Amplitude ADSR >'),
+            MenuNumberEditor(title='lpf freq', target=self, prop='lpf_freq',  min=0, max=10000, step=1000, onInput=self.play_tone, unit='hz'),
+            MenuNumberEditor(title='lpf q   ', target=self, prop='lpf_q',     min=0, max=5, step=0.25,  onInput=self.play_tone, unit=''),
+            MenuItemAction(title='^ done', action=self.close),
             # MenuItemAction(title='waveform', action=self.choose_waveform),
         ])
+    def close(self):
+        self.seq.close_voice_menu()
+
     def play_tone(self, joy, key):
+        if key and key.key_number == KEY_BACK:
+            print("doing a key back")
         if key and (key.key_number == 2 or key.key_number == 1):
             if key.pressed:
                 adsr = synthio.Envelope(
@@ -103,7 +114,8 @@ class VoiceSettings():
                     sustain_level=self.sustain_level/100,
                 )
                 midi_note = 65
-                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wave_saw, envelope=adsr)
+                lpf = self.synth.low_pass_filter(self.lpf_freq,self.lpf_q)
+                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wave_saw, envelope=adsr, filter=lpf)
                 self.synth.press(self.test_note)
             if key.released:
                 self.synth.release(self.test_note)
@@ -267,8 +279,12 @@ class DrumSequencer(displayio.Group):
                 self.playFromStart()
 
     def open_voice_menu(self, voice):
-        self.settings = VoiceSettings(voice,self.synth)
+        self.settings = VoiceSettings(voice,self.synth,self)
         self.append(self.settings.menu)
         self.menu_showing = True
+    def close_voice_menu(self):
+        self.remove(self.settings.menu)
+        self.settings = None
+        self.menu_showing = False
 
 

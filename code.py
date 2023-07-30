@@ -149,6 +149,20 @@ joystick = JoystickEventManager()
 KEY_START = 2
 KEY_SELECT = 3
 keys = {}
+
+# menu = Menu([
+#     MenuHeader(title='MENU'),
+#     MenuItemAction(action=print_hello, title='print hello'),
+#     MenuNumberEditor(getter=get_volume, setter=set_volume, min=0, max=1.0, step=0.1),
+#     SubMenu([
+#         MenuItemAction(action=print_hello, title='print hello'),
+#         MenuItemAction(action=print_hello, title='print hello'),
+#         MenuItemAction(action=print_hello, title='print hello'),
+#     ], title='go to sub menu >')
+# ], title='Main Menu')    
+# menu.hidden = True
+# group.append(menu)
+
 debug = DebugTextOverlay(terminalio.FONT, 'foo')
 debug.grid.x = 0
 debug.grid.y = 9*12 + 8
