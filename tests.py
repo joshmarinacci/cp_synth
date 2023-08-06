@@ -69,7 +69,7 @@ noisewave = np.array([random.randint(-32767, 32767) for i in range(SAMPLE_SIZE)]
 plain_saw = np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
 noisy_saw =     np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
 for i in range(0,len(noisy_saw)):
-    noisy_saw[i] = lerp(noisewave[i],plain_saw[i],0.9)
+    noisy_saw[i] = lerp(noisewave[i],plain_saw[i],0.75)
 # noisy_saw = lerp(noisewave,plain_saw,0.9)
 
 def play_with_waveform(wav):
@@ -86,24 +86,24 @@ def play_with_waveform(wav):
         time.sleep(speed)
 
 def popcorn():
-    # amp_env_slow = synthio.Envelope(attack_time=0.2, release_time=1.0, sustain_level=1.0)
     popcorn = synthio.Envelope(attack_time=0, release_time=0, sustain_level=0, decay_time=0.10)
     synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, envelope=popcorn)
     b = 72
     notes = [b, b-2, b, b-3, b-5, b-3, b-7, 20]
     speed = 0.10
     mixer.voice[0].play(synth)
-    for n in notes:
-        # note = synthio.Note( synthio.midi_to_hz(n), bend=lfo )
-        note = synthio.Note( 
-            synthio.midi_to_hz(n), 
-            # amplitude=lfo, 
-            # waveform=wave_saw
-              )
-        synth.press(note)
-        time.sleep(speed)
-        synth.release(note)
-        time.sleep(speed)
+    for c in range(4):
+        for n in notes:
+            # note = synthio.Note( synthio.midi_to_hz(n), bend=lfo )
+            note = synthio.Note( 
+                synthio.midi_to_hz(n), 
+                # amplitude=lfo, 
+                # waveform=wave_saw
+                )
+            synth.press(note)
+            time.sleep(speed)
+            synth.release(note)
+            time.sleep(speed)
 
 def deeda():
     lfo = synthio.LFO(rate=8, scale=0.2, waveform=saw_down)
@@ -128,7 +128,7 @@ def bladerunner():
     b = 76
     lfo = synthio.LFO(rate=0.1, offset=4000,scale=4000, waveform=saw_up)
     envelope = synthio.Envelope(attack_time=1.0, release_time=1.0, sustain_level=1.0, decay_time=0.1)
-    synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, waveform=saw_up)
+    synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, waveform=noisy_saw)
     synth.blocks.append(lfo)
     mixer.voice[0].play(synth)
     mixer.voice[0].level = 0.25  # 25% volume might be better
@@ -149,6 +149,7 @@ def bladerunner():
     play_note(b)
     play_note(b+2)
     play_note(b-2)
+    play_note(b)
 
 def tubeway():
     env = synthio.Envelope(attack_time=0.05, decay_time=0.05)
@@ -164,13 +165,15 @@ def tubeway():
     start = time.monotonic()
     ni = 0
     cur_note = None
-    while True:
+    count = 0
+    while count < 8:
         diff = time.monotonic() - start
         if diff > 0.5:
             if cur_note:
                 synth.release(cur_note)
                 cur_note = None
                 hihat.trigger()
+                count += 1
             else:
                 n = notes[ni]
                 cur_note = synthio.Note(synthio.midi_to_hz(n))
@@ -179,21 +182,50 @@ def tubeway():
                 hihat.trigger()
             start = time.monotonic()
         hihat.update()
-    for n in notes:
-        note = synthio.Note(synthio.midi_to_hz(n))
-        # synth.press(note)
-        # hihat.trigger()
-        time.sleep(speed)
-        # synth.release(note)
-        time.sleep(speed)
+
+def square_test():
+    play_with_waveform(square_wav)
+def triangle_test():
+    play_with_waveform(triangle_wav)
+def saw_test():
+    play_with_waveform(saw_down)
+def noisy_saw_test():    
+    play_with_waveform(noisy_saw)
+
+menu = Menu([
+    MenuHeader(title='Synth Tests '),
+    MenuItemAction(title='square wave', action=square_test),
+    MenuItemAction(title='triangle wave', action=triangle_test),
+    MenuItemAction(title='saw wave', action=saw_test),
+    MenuItemAction(title='noisy saw wave', action=noisy_saw_test),
+    MenuItemAction(title='tubeway', action=tubeway),
+    MenuItemAction(title='popcorn', action=popcorn),
+    MenuItemAction(title='laser effect', action=deeda),
+    MenuItemAction(title='bladerunner', action=bladerunner),
+])
+
+display = board.DISPLAY
+display.root_group = menu
+
+joystick = JoystickEventManager()
+k = keypad.ShiftRegisterKeys(
+    clock=board.BUTTON_CLOCK,
+    data=board.BUTTON_OUT,
+    latch=board.BUTTON_LATCH,
+    key_count=8,
+    value_when_pressed=True,
+)
+
+KEY_START = 2
+KEY_SELECT = 3
+keys = {}
 
 
 while True:
-    # play_with_waveform(square_wav)
-    # play_with_waveform(triangle_wav)
-    # play_with_waveform(saw_down)
-    # play_with_waveform(noisy_saw)
-    tubeway()
-    # popcorn()
-    # deeda()
-    # bladerunner()
+    key = k.events.get()
+    if key:
+        keys[key.key_number] = key.pressed
+        # if KEY_START in keys and KEY_SELECT in keys and keys[KEY_START] and keys[KEY_SELECT]:
+            # do_screenshot()
+    joy = joystick.update()
+    menu.update(joy, key)
