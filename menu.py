@@ -205,11 +205,11 @@ class MenuBooleanEditor(MenuItem):
         val = getattr(self.target,self.prop)
         print("boolean value",val)
         if val == True:
-            self.editor[0] = 2
-            self.editor[1] = 3
-        else:
             self.editor[0] = 4
             self.editor[1] = 5
+        else:
+            self.editor[0] = 2
+            self.editor[1] = 3
 
     def update(self, joy, key):
         if key and key.key_number == ACTION and key.pressed:
@@ -221,7 +221,40 @@ class MenuBooleanEditor(MenuItem):
         if self.onInput:
             self.onInput(joy,key)
 
+class MenuSelectItem(MenuTextItem):
+    def __init__(self, target, prop, value, onInput=None) -> None:
+        super().__init__(value)
+        self.onInput = onInput
+        self.value = value
+        self.target = target
+        self.prop = prop
 
+    def update(self, joy, key):
+        if key and key.pressed:
+            if key.key_number == ACTION:
+                setattr(self.target, self.prop, self.value)
+        if self.onInput:
+            self.onInput(joy,key)
+        # self.refresh()
+
+class MenuSelectEditor(MenuTextItem):
+    def __init__(self, target, prop, values, title='value', onInput=None):
+        super().__init__(title=title)
+        self.target = target
+        self.prop = prop
+        self.rows = []
+        for value in values:
+            self.rows.append(MenuSelectItem(target,prop,value, onInput=onInput))
+        self.rows.insert(0,MenuHeader(title='choose waveform'))
+        self.rows.append(MenuItemBack())
+
+    def update(self, joy, key):
+        if key and key.pressed:
+            if key.key_number == ACTION:
+                self.nav_sub()
+
+    def nav_sub(self):
+        self.parent_menu.push_menu(self.rows, self.title)
 
 class Menu(displayio.Group):
     def __init__(self, rows, bgcolor=0x000000, fgcolor=0xffffff, title='title') -> None:

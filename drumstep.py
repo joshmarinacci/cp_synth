@@ -3,7 +3,8 @@ import time
 import adafruit_imageload
 import ulab.numpy as np
 import synthio
-from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor, SubMenu, MenuBooleanEditor
+from menu import Menu, MenuHeader, MenuItemAction, MenuNumberEditor, SubMenu, MenuBooleanEditor, MenuSelectEditor
+import random
 
 from drums import SAMPLE_RATE, KickDrum, SnareDrum, HighHat
 
@@ -11,7 +12,27 @@ SAMPLE_SIZE = 512
 SAMPLE_VOLUME = 32000  # 0-32767
 wave_sine = np.array(np.sin(np.linspace(0, 2*np.pi, SAMPLE_SIZE, endpoint=False)) * SAMPLE_VOLUME, dtype=np.int16)
 wave_saw = np.linspace(SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+wave_noise = np.array([random.randint(-32767, 32767) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 
+def make_square(per):
+    waveform = np.linspace(-SAMPLE_VOLUME, -SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+    for i in range(int(SAMPLE_SIZE*per)):
+        waveform[i] = SAMPLE_VOLUME
+    return waveform
+wave_square = make_square(0.5)
+
+def lerp(a, b, t):  return (1-t)*a + t*b
+def make_triangle():
+    waveform = np.linspace(0,0,num=SAMPLE_SIZE, dtype=np.int16)
+    for i in range(0,SAMPLE_SIZE/2):
+        t = i/SAMPLE_SIZE/2
+        waveform[i] = lerp(-SAMPLE_VOLUME,SAMPLE_VOLUME,t)
+    for i in range(0,SAMPLE_SIZE/2):
+        t = i/SAMPLE_SIZE/2
+        waveform[i+SAMPLE_SIZE/2] = lerp(SAMPLE_VOLUME,-SAMPLE_VOLUME,t)
+    return waveform
+
+wave_triangle = make_triangle()
 
 # a bar is 4 whole notes
 # there are 16 steps, each a quarter note
@@ -81,12 +102,15 @@ class VoiceSettings():
         self.attack_level  = 100
         self.sustain_level = 80
 
-        self.lpf_enabled = True
+        self.waveform_name = 'square'
+
+        self.lpf_enabled = False
         self.lpf_freq = 2000
         self.lpf_q = 1.5
         self.menu = Menu([
             MenuHeader(title='Voice Settings '),
             MenuHeader(title=voice.title),
+            MenuSelectEditor(title='Waveform >', target=self, prop='waveform_name', values=['square','triangle','sawtooth','noise'], onInput=self.play_tone),
             SubMenu([
                 MenuNumberEditor(title='A level', target=self, prop='attack_level',  min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
                 MenuNumberEditor(title='A time ', target=self, prop='attack_time',   min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
@@ -120,7 +144,17 @@ class VoiceSettings():
                 lpf = None
                 if self.lpf_enabled:
                     lpf = self.synth.low_pass_filter(self.lpf_freq,self.lpf_q)
-                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wave_saw, envelope=adsr, filter=lpf)
+                wav = wave_saw
+                print("using",self.waveform_name)
+                if self.waveform_name == 'square':
+                    wav = wave_square
+                if self.waveform_name == 'triangle':
+                    wav = wave_triangle
+                if self.waveform_name == 'sawtooth':
+                    wav = wave_saw
+                if self.waveform_name == 'noise':
+                    wav = wave_noise
+                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wav, envelope=adsr, filter=lpf)
                 self.synth.press(self.test_note)
             if key.released:
                 self.synth.release(self.test_note)
