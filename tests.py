@@ -67,7 +67,7 @@ square_wav = make_square(0.5)
 triangle_wav = make_triangle()
 noisewave = np.array([random.randint(-32767, 32767) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 plain_saw = np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
-noisy_saw =     np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
+noisy_saw = np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
 for i in range(0,len(noisy_saw)):
     noisy_saw[i] = lerp(noisewave[i],plain_saw[i],0.75)
 # noisy_saw = lerp(noisewave,plain_saw,0.9)
@@ -192,16 +192,46 @@ def saw_test():
 def noisy_saw_test():    
     play_with_waveform(noisy_saw)
 
+def tremolo_test():
+    synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, waveform=triangle_wav)
+    mixer.voice[0].play(synth)
+    b = 72-8-8
+    notes = [b, b-2, b, b-3, b-5, b-3, b-7, 1]
+    speed = 0.80
+    lfo = synthio.LFO(rate=8)
+    for n in notes:
+        note = synthio.Note(synthio.midi_to_hz(n), amplitude=lfo)
+        synth.press(note)
+        time.sleep(speed)
+        synth.release(note)
+        time.sleep(speed)
+
+def vibrato_test():
+    synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, waveform=triangle_wav)
+    mixer.voice[0].play(synth)
+    b = 72-8-8
+    notes = [b, b-2, b, b-3, b-5, b-3, b-7, 1]
+    speed = 0.80
+    lfo = synthio.LFO(rate=4, scale=1/12)
+    for n in notes:
+        note = synthio.Note(synthio.midi_to_hz(n), bend=lfo)
+        synth.press(note)
+        time.sleep(speed)
+        synth.release(note)
+        time.sleep(speed)
+
 menu = Menu([
     MenuHeader(title='Synth Tests '),
-    MenuItemAction(title='square wave', action=square_test),
-    MenuItemAction(title='triangle wave', action=triangle_test),
+    # MenuItemAction(title='square wave', action=square_test),
+    # MenuItemAction(title='triangle wave', action=triangle_test),
     MenuItemAction(title='saw wave', action=saw_test),
     MenuItemAction(title='noisy saw wave', action=noisy_saw_test),
     MenuItemAction(title='tubeway', action=tubeway),
     MenuItemAction(title='popcorn', action=popcorn),
     MenuItemAction(title='laser effect', action=deeda),
     MenuItemAction(title='bladerunner', action=bladerunner),
+    MenuItemAction(title='tremolo', action=tremolo_test),
+    MenuItemAction(title='vibrato', action=vibrato_test),
 ])
 
 display = board.DISPLAY
