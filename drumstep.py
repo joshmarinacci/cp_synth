@@ -107,6 +107,16 @@ class VoiceSettings():
         self.lpf_enabled = False
         self.lpf_freq = 2000
         self.lpf_q = 1.5
+
+        self.tremolo_enabled = False
+        self.tremolo_rate = 4
+        self.tremolo_scale = 1
+        self.tremolo_offset = 0.5
+
+        self.vibrato_enabled = False
+        self.vibrato_rate = 4
+        self.vibrato_scale = 1
+        self.vibrato_offset = 0.5
         self.menu = Menu([
             MenuHeader(title='Voice Settings '),
             MenuHeader(title=voice.title),
@@ -118,9 +128,23 @@ class VoiceSettings():
                 MenuNumberEditor(title='S level', target=self, prop='sustain_level', min=0, max=100, step=5,  onInput=self.play_tone, unit='%'),
                 MenuNumberEditor(title='R time ', target=self, prop='release_time',  min=0, max=500, step=10, onInput=self.play_tone, unit='ms'),
             ], title='Amplitude ADSR >'),
-            MenuBooleanEditor(title='lpf enabled', target=self, prop='lpf_enabled',onInput=self.play_tone),
-            MenuNumberEditor(title='lpf freq', target=self, prop='lpf_freq',  min=0, max=10000, step=1000, onInput=self.play_tone, unit='hz'),
-            MenuNumberEditor(title='lpf q   ', target=self, prop='lpf_q',     min=0, max=5, step=0.25,  onInput=self.play_tone, unit=''),
+            SubMenu([
+                MenuBooleanEditor(title='tremolo enabled', target=self, prop='tremolo_enabled',onInput=self.play_tone),
+                MenuNumberEditor( title='rate',            target=self, prop='tremolo_rate',  min=0, max=100, step=1,   onInput=self.play_tone, unit='hz'),
+                MenuNumberEditor( title='scale',           target=self, prop='tremolo_scale', min=0, max=2,   step=0.1, onInput=self.play_tone, unit=''),
+                MenuNumberEditor( title='offset',          target=self, prop='tremolo_offset',min=0, max=2,   step=0.1, onInput=self.play_tone, unit=''),
+            ], title='Tremolo >'),
+            SubMenu([
+                MenuBooleanEditor(title='vibrato enabled', target=self, prop='vibrato_enabled',onInput=self.play_tone),
+                MenuNumberEditor( title='rate',            target=self, prop='vibrato_rate',  min=0, max=100, step=1,   onInput=self.play_tone, unit='hz'),
+                MenuNumberEditor( title='scale',           target=self, prop='vibrato_scale', min=0, max=12,   step=1, onInput=self.play_tone, unit='semitone'),
+                MenuNumberEditor( title='offset',          target=self, prop='vibrato_offset',min=0, max=2,   step=0.1, onInput=self.play_tone, unit=''),
+            ], title='Vibrato >'),
+            SubMenu([
+                MenuBooleanEditor(title='lpf enabled', target=self, prop='lpf_enabled',onInput=self.play_tone),
+                MenuNumberEditor(title='lpf freq', target=self, prop='lpf_freq',  min=0, max=10000, step=1000, onInput=self.play_tone, unit='hz'),
+                MenuNumberEditor(title='lpf q   ', target=self, prop='lpf_q',     min=0, max=5, step=0.25,  onInput=self.play_tone, unit=''),
+            ], title='Filter >'),
             MenuItemAction(title='^ done', action=self.close),
             # MenuItemAction(title='waveform', action=self.choose_waveform),
         ])
@@ -145,7 +169,12 @@ class VoiceSettings():
                 if self.lpf_enabled:
                     lpf = self.synth.low_pass_filter(self.lpf_freq,self.lpf_q)
                 wav = wave_saw
-                print("using",self.waveform_name)
+                tremolo = 1
+                if self.tremolo_enabled:
+                    tremolo = synthio.LFO(rate=self.tremolo_rate, scale=self.tremolo_scale, offset=self.tremolo_offset)
+                vibrato = 0
+                if self.vibrato_enabled:
+                    vibrato = synthio.LFO(rate=self.vibrato_rate, scale=self.vibrato_scale/12, offset=self.vibrato_offset)
                 if self.waveform_name == 'square':
                     wav = wave_square
                 if self.waveform_name == 'triangle':
@@ -154,7 +183,7 @@ class VoiceSettings():
                     wav = wave_saw
                 if self.waveform_name == 'noise':
                     wav = wave_noise
-                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wav, envelope=adsr, filter=lpf)
+                self.test_note = synthio.Note(synthio.midi_to_hz(midi_note), waveform=wav, envelope=adsr, filter=lpf, amplitude=tremolo, bend=vibrato)
                 self.synth.press(self.test_note)
             if key.released:
                 self.synth.release(self.test_note)
