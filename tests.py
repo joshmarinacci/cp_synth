@@ -67,10 +67,9 @@ square_wav = make_square(0.5)
 triangle_wav = make_triangle()
 noisewave = np.array([random.randint(-32767, 32767) for i in range(SAMPLE_SIZE)], dtype=np.int16)
 plain_saw = np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
-noisy_saw = np.linspace(-SAMPLE_VOLUME, SAMPLE_VOLUME, num=SAMPLE_SIZE, dtype=np.int16)
-for i in range(0,len(noisy_saw)):
-    noisy_saw[i] = lerp(noisewave[i],plain_saw[i],0.75)
-# noisy_saw = lerp(noisewave,plain_saw,0.9)
+noisy_saw = np.zeros(SAMPLE_SIZE, dtype=np.int16)
+noisy_saw[:] = lerp(noisewave,plain_saw,0.8)
+
 
 def play_with_waveform(wav):
     synth = synthio.Synthesizer(sample_rate=SAMPLE_RATE, waveform=wav)
